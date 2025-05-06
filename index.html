@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админка - Волонтеры Подмосковья</title>
+    <style>
+        /* Тот же стиль, что и раньше */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #2a6fbb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #dfe7f1;
+        }
+        nav button {
+            padding: 15px 25px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        nav button.active {
+            background-color: #b9d3ee;
+            font-weight: bold;
+        }
+        .tab {
+            display: none;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        li {
+            background: #f9f9f9;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        img {
+            width: 100%;
+            border-bottom: 2px solid #2a6fbb;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Волонтеры Подмосковья</h1>
+</header>
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Volunteer_Moscow_Region.svg/1200px-Volunteer_Moscow_Region.svg.png" alt="Фото волонтеров">
+
+<div class="container">
+    <nav>
+        <button onclick="openTab(event, 'events')" class="active">Создать мероприятие</button>
+        <button onclick="openTab(event, 'assign')">Назначить часы и оценки</button>
+    </nav>
+
+    <!-- ВКЛАДКА СОЗДАНИЯ МЕРОПРИЯТИЙ -->
+    <div id="events" class="tab" style="display:block;">
+        <h2>Добавить мероприятие</h2>
+        <input type="text" id="eventTitle" placeholder="Название мероприятия">
+        <input type="date" id="eventDate">
+        <input type="text" id="eventPlace" placeholder="Место проведения">
+        <input type="text" id="eventCity" placeholder="Город">
+        <button onclick="addEvent()">Сохранить мероприятие</button>
+
+        <h3>Список мероприятий</h3>
+        <ul id="eventList"></ul>
+    </div>
+
+    <!-- ВКЛАДКА НАЗНАЧЕНИЯ ЧАСОВ И ОЦЕНОК -->
+    <div id="assign" class="tab">
+        <h2>Назначить часы и оценки</h2>
+        <select id="volunteerSelect"></select>
+        <select id="assignEventSelect"></select>
+        <input type="number" id="hours" placeholder="Часы">
+        <input type="number" id="rating" placeholder="Оценка от 1 до 5">
+        <button onclick="assignHours()">Назначить</button>
+
+        <h3>Назначенные часы</h3>
+        <ul id="assignmentList"></ul>
+    </div>
+</div>
+
+<script>
+    const volunteers = [
+        { login: "user1", password: "pass1", fio: "Иванов Иван Иванович" },
+        { login: "user2", password: "pass2", fio: "Петров Петр Петрович" },
+        { login: "user3", password: "pass3", fio: "Смирнов Алексей Сергеевич" },
+        { login: "user4", password: "pass4", fio: "Кузнецов Дмитрий Андреевич" },
+        { login: "user5", password: "pass5", fio: "Попов Максим Олегович" },
+        { login: "user6", password: "pass6", fio: "Соколов Артем Романович" },
+        { login: "user7", password: "pass7", fio: "Михайлов Александр Владимирович" },
+        { login: "user8", password: "pass8", fio: "Федоров Сергей Николаевич" },
+        { login: "user9", password: "pass9", fio: "Морозов Евгений Павлович" },
+        { login: "user10", password: "pass10", fio: "Волков Даниил Максимович" },
+        { login: "user11", password: "pass11", fio: "Алексеев Илья Дмитриевич" },
+        { login: "user12", password: "pass12", fio: "Лебедев Константин Сергеевич" },
+        { login: "user13", password: "pass13", fio: "Семёнов Никита Александрович" },
+        { login: "user14", password: "pass14", fio: "Егоров Михаил Юрьевич" },
+        { login: "user15", password: "pass15", fio: "Павлов Глеб Олегович" },
+        { login: "user16", password: "pass16", fio: "Козлов Тимофей Викторович" },
+        { login: "user17", password: "pass17", fio: "Степанов Валерий Леонидович" },
+        { login: "user18", password: "pass18", fio: "Николаев Игорь Витальевич" },
+        { login: "user19", password: "pass19", fio: "Орлов Роман Алексеевич" },
+        { login: "user20", password: "pass20", fio: "Андреев Антон Михайлович" }
+    ];
+
+    // Загружаем из localStorage или создаём новые
+    let events = JSON.parse(localStorage.getItem("events")) || [];
+    let assignments = JSON.parse(localStorage.getItem("assignments")) || [];
+
+    function saveData() {
+        localStorage.setItem("events", JSON.stringify(events));
+        localStorage.setItem("assignments", JSON.stringify(assignments));
+    }
+
+    // Переключение вкладок
+    function openTab(evt, tabName) {
+        document.querySelectorAll(".tab").forEach(tab => tab.style.display = "none");
+        document.querySelectorAll("nav button").forEach(btn => btn.classList.remove("active"));
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.classList.add("active");
+
+        if (tabName === "assign") {
+            updateVolunteerSelect();
+            updateEventSelect();
+        }
+    }
+
+    // Добавление мероприятия
+    function addEvent() {
+        const title = document.getElementById("eventTitle").value;
+        const date = document.getElementById("eventDate").value;
+        const place = document.getElementById("eventPlace").value;
+        const city = document.getElementById("eventCity").value;
+
+        if (!title || !date || !place || !city) return alert("Заполните все поля");
+
+        const event = { title, date, place, city };
+        events.push(event);
+        saveData();
+        updateEventList();
+        alert("Мероприятие добавлено!");
+    }
+
+    function updateEventList() {
+        const list = document.getElementById("eventList");
+        list.innerHTML = "";
+        events.forEach(e => {
+            const li = document.createElement("li");
+            li.textContent = `${e.title} (${e.date}), ${e.place}, г. ${e.city}`;
+            list.appendChild(li);
+        });
+    }
+
+    // Заполнение списка волонтеров
+    function updateVolunteerSelect() {
+        const sel = document.getElementById("volunteerSelect");
+        sel.innerHTML = "<option value=''>Выберите волонтера</option>";
+        volunteers.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v.login;
+            opt.textContent = v.fio;
+            sel.appendChild(opt);
+        });
+    }
+
+    // Заполнение списка мероприятий для назначения
+    function updateEventSelect() {
+        const sel = document.getElementById("assignEventSelect");
+        sel.innerHTML = "<option value=''>Выберите мероприятие</option>";
+        events.forEach((e, i) => {
+            const opt = document.createElement("option");
+            opt.value = i;
+            opt.textContent = `${e.title} (${e.date})`;
+            sel.appendChild(opt);
+        });
+    }
+
+    // Назначение часов и оценки
+    function assignHours() {
+        const volunteerLogin = document.getElementById("volunteerSelect").value;
+        const eventIndex = parseInt(document.getElementById("assignEventSelect").value);
+        const hours = document.getElementById("hours").value;
+        const rating = document.getElementById("rating").value;
+
+        if (!volunteerLogin || isNaN(eventIndex) || !hours || !rating) {
+            return alert("Заполните все поля");
+        }
+
+        const assignment = {
+            volunteer: volunteerLogin,
+            event: events[eventIndex],
+            hours,
+            rating
+        };
+
+        assignments.push(assignment);
+        saveData();
+        updateAssignmentList();
+        alert("Часы и оценка назначены!");
+    }
+
+    function updateAssignmentList() {
+        const list = document.getElementById("assignmentList");
+        list.innerHTML = "";
+        assignments.forEach(a => {
+            const volunteer = volunteers.find(v => v.login === a.volunteer);
+            const name = volunteer ? volunteer.fio : "Неизвестный";
+            const eventTitle = a.event.title;
+            const eventDate = a.event.date;
+
+            const li = document.createElement("li");
+            li.textContent = `${name}: ${eventTitle} (${eventDate}) — ${a.hours} ч., Оценка: ${a.rating}`;
+            list.appendChild(li);
+        });
+    }
+
+    // Инициализация при загрузке
+    window.onload = () => {
+        updateEventList();
+        updateAssignmentList();
+    };
+</script>
+
+</body>
+</html>
